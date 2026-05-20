@@ -1,0 +1,3 @@
+https://github.com/ChillCube/SpriteHelper
+https://github.com/ChillCube/Godot_2D_Mouse_Dragging 
+https://github.com/ChillCube/PlacementArea2D
