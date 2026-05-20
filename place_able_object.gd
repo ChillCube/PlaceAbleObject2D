@@ -3,6 +3,7 @@ class_name PlaceAbleUIObject2D
 
 @export var mouse_left_input : String = "mb_left";
 @export var center_to_placement_area : bool = true;
+
 var dragger : DragWithMouse;
 var _original_position : Vector2 = Vector2.ZERO;
 var picked_up = false;
