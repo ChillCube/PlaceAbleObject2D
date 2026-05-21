@@ -88,3 +88,15 @@ func _on_object_placed():
 			global_scale = original_size
 			_base_scale = scale.x
 		emit_signal("just_placed", global_position)
+	# mouse_entered doesn't re-fire if the cursor was already over an element when the drag
+	# ended (or when z_index reset exposed an element below). Push a synthetic motion event
+	# so Area2D hover detection re-evaluates for elements now under the cursor.
+	_push_mouse_recheck()
+
+func _push_mouse_recheck() -> void:
+	var vp := get_viewport()
+	if not is_instance_valid(vp):
+		return
+	var recheck := InputEventMouseMotion.new()
+	recheck.position = vp.get_mouse_position()
+	vp.push_input(recheck)
