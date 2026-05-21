@@ -5,12 +5,15 @@ class_name PlaceAbleUIObject2D
 @export var center_to_placement_area : bool = true;
 @export var keep_original_size : bool = true; ## if set to true, will keep the original size, even if the placement has their scale increased
 
+static var _any_dragging: bool = false
+
 var dragger : DragWithMouse;
 var _original_position : Vector2 = Vector2.ZERO;
 var picked_up = false;
 var is_in_placement_area : bool = false;
 var placement_area : PlacementArea2D;
 var original_size : Vector2;
+var _original_z_index : int = 0;
 
 signal just_placed(_position : Vector2)
 signal just_picked_up(_position : Vector2)
@@ -30,34 +33,53 @@ func _ready() -> void:
 
 func _process(delta: float) -> void:
 	super(delta);
+	dragger.on = picked_up or not _any_dragging;
 	if get_parent() is PlacementArea2D:
 		is_in_placement_area = true;
 		if not dragger.moving:
-			if mover: mover.global_target_position = placement_area.global_position;
+			if mover: 
+				placement_area = get_parent();
+				mover.global_target_position = placement_area.global_position;
 	if picked_up:
 		is_selected = true;
 	else:
 		if not is_in_placement_area:
 			if mover: mover.global_target_position = _original_position
 
+func _update_placement_area() -> void:
+	var best : PlacementArea2D = null
+	var best_dist := INF
+	for area in _area.get_overlapping_areas():
+		if area is PlacementArea2D and not area.is_full() and area.can_accept(self):
+			var d = global_position.distance_squared_to(area.global_position)
+			if d < best_dist:
+				best_dist = d
+				best = area
+	placement_area = best
+	is_in_placement_area = best != null
+
 func _on_area_entered(area : Area2D):
-	if area is PlacementArea2D:
-		if not area.is_full():
-			is_in_placement_area = true;
-			placement_area = area;
+	if area is PlacementArea2D and area.can_accept(self):
+		_update_placement_area()
 
 func _on_area_exited(area : Area2D):
-	if area == placement_area:
-		is_in_placement_area = false;
+	if area is PlacementArea2D:
+		_update_placement_area()
 
 func _on_object_picked_up():
 	is_in_placement_area = false;
-	_original_position = global_position;
+	_original_position = mover.global_target_position if mover else global_position;
 	picked_up = true;
-	emit_signal("_picked_up", global_position)
+	_any_dragging = true;
+	_original_z_index = z_index;
+	z_index = 100;
+	emit_signal("just_picked_up", global_position)
 
 func _on_object_placed():
 	picked_up = false;
+	_any_dragging = false;
+	z_index = _original_z_index;
+	_update_placement_area()
 	if not is_in_placement_area:
 		if mover: mover.global_target_position = _original_position;
 	else:
@@ -65,4 +87,4 @@ func _on_object_placed():
 		if keep_original_size:
 			global_scale = original_size
 			_base_scale = scale.x
-		emit_signal("placed", global_position)
+		emit_signal("just_placed", global_position)
